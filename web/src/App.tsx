@@ -3,7 +3,7 @@ import {getDrawFn, Kernel, FilterOption} from './dip'
 import './App.css'
 
 const CANVAS_WIDTH = 600
-
+// https://stackoverflow.com/questions/55972588/access-imagedata-data-using-go-webassembly
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})
   const setKernel = useRef<(val: Kernel) => void>(() => {})
@@ -24,23 +24,23 @@ function App() {
         const goInstance = result.instance
         go.run(goInstance)
 
-        // const w = 2
-        // const h = 2
-        // const dataLen = w * h
-        // const {internalptr: ptr} = window.initShareMemory(dataLen * 2)
-        // const mem = new Uint8Array(
-        //   goInstance.exports.mem.buffer,
-        //   ptr,
-        //   dataLen * 2
-        // )
-        // mem.set(new Uint8ClampedArray([...new Array(dataLen * 2)].fill(1)))
-        // const kernel = [
-        //   [-1, -1, -1],
-        //   [-1, 9, -1],
-        //   [-1, -1, -1],
-        // ]
-        // window.filterByGO(ptr, w, h, kernel.flat())
-
+        const w = 200
+        const h = 100
+        const dataLen = w * h
+        const {internalptr: ptr} = window.initShareMemory(dataLen * 2)
+        const mem = new Uint8Array(
+          goInstance.exports.mem.buffer,
+          ptr,
+          dataLen * 2
+        )
+        mem.set(new Uint8ClampedArray([...new Array(dataLen * 2)].fill(1)))
+        const kernel = [
+          [-1, -1, -1],
+          [-1, 9, -1],
+          [-1, -1, -1],
+        ]
+        window.filterByGO(ptr, w, h, kernel.flat())
+        debugger
         if (videoRef.current && canvasRef.current) {
           videoRef.current.crossOrigin = 'anonymous'
           videoRef.current.src = '/test.mp4'

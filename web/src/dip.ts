@@ -144,7 +144,11 @@ export function getDrawFn(
   const dataLen = canvas.height * canvas.width
   //@ts-ignore
   const {internalptr: ptr} = window.initShareMemory(dataLen * 4)
-  const mem = new Uint8Array(goInstance.exports.mem.buffer, ptr, dataLen * 4)
+  const mem = new Uint8Array(
+    goInstance.exports.mem.buffer,
+    ptr,
+    dataLen * 4 + 10000
+  )
 
   // mem.set([1, 2, 3, 4, 5])
   // window.filterByGO(ptr, 1, 5)
@@ -186,18 +190,20 @@ export function getDrawFn(
         break
       }
       case FilterOption.wasm: {
-        // mem.set(pixels.data)
-        // filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
-        // pixels.data.set(mem)
-        pixels.data.set(
-          //@ts-ignore
-          window.filterByGOCopy(
-            pixels.data,
-            canvas.width,
-            canvas.height,
-            kernelMap[kernel].flat()
-          )
-        )
+        mem.set(pixels.data)
+        filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
+        pixels.data.set(mem)
+        // const a = window.filterByGOCopy(
+        //   pixels.data,
+        //   canvas.width,
+        //   canvas.height,
+        //   kernelMap[kernel].flat()
+        // )
+
+        // pixels.data.set(
+        //   a
+        //   //@ts-ignore
+        // )
         break
       }
     }
