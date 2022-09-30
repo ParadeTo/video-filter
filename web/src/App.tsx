@@ -13,34 +13,68 @@ function App() {
   const loaded = useRef<boolean>(false)
 
   useEffect(() => {
-    if (videoRef.current && canvasRef.current && !loaded.current) {
-      loaded.current = true
-      videoRef.current.crossOrigin = 'anonymous'
-      videoRef.current.src = '/test.mp4'
-      videoRef.current.play()
+    if (loaded.current) return
+    loaded.current = true
 
-      const {
-        draw,
-        setFilterOption: fn1,
-        setKernel: fn2,
-      } = getDrawFn(videoRef.current, canvasRef.current, (fps: number) => {
-        if (fpsRef.current) fpsRef.current.innerHTML = fps.toFixed(2)
-      })
+    // @ts-ignore
+    const go = new Go()
 
-      setFilterOption.current = fn1
-      setKernel.current = fn2
-      videoRef.current.addEventListener('loadedmetadata', function () {
-        // @ts-ignore
-        canvasRef.current.width = CANVAS_WIDTH
-        // @ts-ignore
-        canvasRef.current.height =
-          // @ts-ignore
-          (videoRef.current.videoHeight * CANVAS_WIDTH) /
-          // @ts-ignore
-          videoRef.current.videoWidth
-        draw()
-      })
-    }
+    WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject).then(
+      (result) => {
+        const goInstance = result.instance
+        go.run(goInstance)
+
+        // const w = 2
+        // const h = 2
+        // const dataLen = w * h
+        // const {internalptr: ptr} = window.initShareMemory(dataLen * 2)
+        // const mem = new Uint8Array(
+        //   goInstance.exports.mem.buffer,
+        //   ptr,
+        //   dataLen * 2
+        // )
+        // mem.set(new Uint8ClampedArray([...new Array(dataLen * 2)].fill(1)))
+        // const kernel = [
+        //   [-1, -1, -1],
+        //   [-1, 9, -1],
+        //   [-1, -1, -1],
+        // ]
+        // window.filterByGO(ptr, w, h, kernel.flat())
+
+        if (videoRef.current && canvasRef.current) {
+          videoRef.current.crossOrigin = 'anonymous'
+          videoRef.current.src = '/test.mp4'
+          videoRef.current.play()
+
+          videoRef.current.addEventListener('loadedmetadata', function () {
+            // @ts-ignore
+            canvasRef.current.width = CANVAS_WIDTH
+            // @ts-ignore
+            canvasRef.current.height =
+              // @ts-ignore
+              (videoRef.current.videoHeight * CANVAS_WIDTH) /
+              // @ts-ignore
+              videoRef.current.videoWidth
+            const {
+              draw,
+              setFilterOption: fn1,
+              setKernel: fn2,
+            } = getDrawFn(
+              videoRef.current!,
+              canvasRef.current!,
+              goInstance,
+              (fps: number) => {
+                if (fpsRef.current) fpsRef.current.innerHTML = fps.toFixed(2)
+              }
+            )
+            setFilterOption.current = fn1
+            setKernel.current = fn2
+
+            draw()
+          })
+        }
+      }
+    )
   }, [])
 
   return (

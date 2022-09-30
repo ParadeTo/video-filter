@@ -84,8 +84,8 @@ function filterByJS(
   width: number,
   height: number,
   kernel: number[][]
-  // denominator: number
 ) {
+  // const newData = new Uint8ClampedArray(data)
   const h = kernel.length,
     w = h
   const half = Math.floor(h / 2)
@@ -96,14 +96,14 @@ function filterByJS(
       const px = (y * width + x) * 4 // pixel index.
       let r = 0,
         g = 0,
-        b = 0,
-        a = 0
+        b = 0
+
       // core iteration.
       for (let cy = 0; cy < h; ++cy) {
         for (let cx = 0; cx < w; ++cx) {
           // dealing edge case.
           const cpx = ((y + (cy - half)) * width + (x + (cx - half))) * 4
-
+          // if (px === 50216) debugger
           r += data[cpx + 0] * kernel[cy][cx]
           g += data[cpx + 1] * kernel[cy][cx]
           b += data[cpx + 2] * kernel[cy][cx]
@@ -120,15 +120,38 @@ function filterByJS(
   return data
 }
 
+type Pointer = number
+
+function filterByGO(
+  ptr: Pointer,
+  width: number,
+  height: number,
+  kernel: number[][]
+) {
+  // @ts-ignore
+  window.filterByGO()
+}
+
 export function getDrawFn(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
+  goInstance: WebAssembly.Instance,
   afterEachFrame: (fps: number) => void,
   filterOption: FilterOption = FilterOption.off,
   kernel: Kernel = Kernel.sharpen
 ) {
   const context2D = canvas.getContext('2d')!
-  // let denominator = getDenominator(kernelMap[kernel])
+  const dataLen = canvas.height * canvas.width
+  //@ts-ignore
+  const {internalptr: ptr} = window.initShareMemory(dataLen * 4)
+  const mem = new Uint8Array(goInstance.exports.mem.buffer, ptr, dataLen * 4)
+
+  // mem.set([1, 2, 3, 4, 5])
+  // window.filterByGO(ptr, 1, 5)
+  // console.log(mem[0], mem[4])
+  // console.log(window.filterByGO(ptr, 1, 11))
+  // console.log(mem[10])
+  //@ts-ignore
 
   const draw = () => {
     // record performance.
@@ -163,7 +186,18 @@ export function getDrawFn(
         break
       }
       case FilterOption.wasm: {
-        // pixels.data.set(filterWasm(pixels.data, clientX, clientY))
+        // mem.set(pixels.data)
+        // filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
+        // pixels.data.set(mem)
+        pixels.data.set(
+          //@ts-ignore
+          window.filterByGOCopy(
+            pixels.data,
+            canvas.width,
+            canvas.height,
+            kernelMap[kernel].flat()
+          )
+        )
         break
       }
     }
