@@ -34,11 +34,15 @@ func initShareMemory(this js.Value, args []js.Value) any {
 	return js.ValueOf(boxedPtrMap)
 }
 
-func If(condition bool, trueVal, falseVal uint8) uint8 {
-	if condition {
-		return trueVal
+func getVal(val int) uint8 {
+	if val > 255 {
+		return 255
+	} else {
+		if val < 0 {
+			return 0
+		}
+		return uint8(val)
 	}
-	return falseVal
 }
 
 func filterByGOCopy(this js.Value, args []js.Value) any {
@@ -71,9 +75,9 @@ func filterByGOCopy(this js.Value, args []js.Value) any {
 					// a += data[cpx + 3] * kernel[cy][cx]
 				}
 			}
-			(ret)[px+0] = If(r > 255, 255, If(r < 0, 0, uint8(r)))
-			(ret)[px+1] = If(g > 255, 255, If(g < 0, 0, uint8(g)))
-			(ret)[px+2] = If(b > 255, 255, If(b < 0, 0, uint8(b)))
+			(ret)[px+0] = getVal(r)
+			(ret)[px+1] = getVal(g)
+			(ret)[px+2] = getVal(b)
 		}
 
 	}
@@ -81,24 +85,26 @@ func filterByGOCopy(this js.Value, args []js.Value) any {
 }
 
 func filterByGO(this js.Value, args []js.Value) any {
-	// width := args[1].Int()
-	// height := args[2].Int()
-	// l := width * height
+	width := args[1].Int()
+	height := args[2].Int()
+	size := width * height * 4
 	// sliceHeader := &reflect.SliceHeader{
 	// 	Data: uintptr(args[0].Int()),
-	// 	Len:  l * 4,
-	// 	Cap:  l * 4,
+	// 	Len:  size,
+	// 	Cap:  size,
 	// }
 
 	// ptr := (*[]uint8)(unsafe.Pointer(sliceHeader))
 	// kernel := parseKernel(args[3])
 
-	// fmt.Println(width, height, l*4, kernel)
-
+	data := (*[1 << 30]byte)(unsafe.Pointer(uintptr(args[0].Int())))[:size:size]
+	data[0] = 255
+	data[1] = 255
+	fmt.Println(data)
 	// w := len(kernel)
 	// half := w / 2
-	// for y := 0; y < height-half; y++ {
-	// 	for x := 0; x < width-half; x++ {
+	// for y := half; y < height-half; y++ {
+	// 	for x := half; x < width-half; x++ {
 	// 		px := (y*width + x) * 4 // pixel index.
 	// 		r := 0
 	// 		g := 0
@@ -115,11 +121,13 @@ func filterByGO(this js.Value, args []js.Value) any {
 	// 				// a += data[cpx + 3] * kernel[cy][cx]
 	// 			}
 	// 		}
-	// 		(*ptr)[px+0] = If(r > 255, 255, If(r < 0, 0, uint8(r)))
-	// 		(*ptr)[px+1] = If(g > 255, 255, If(g < 0, 0, uint8(g)))
-	// 		(*ptr)[px+2] = If(b > 255, 255, If(b < 0, 0, uint8(b)))
-	// 	}
 
+	// 		(*ptr)[px+0] = 0   //getVal(r)
+	// 		(*ptr)[px+1] = 0   //getVal(g)
+	// 		(*ptr)[px+2] = 255 //getVal(b)
+	// 		(*ptr)[px+3] = 254 //getVal(b)
+	// 		// fmt.Println((*ptr)[px : px+3])
+	// 	}
 	// }
 
 	// var a []any = []any{data}

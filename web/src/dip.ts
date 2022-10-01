@@ -129,7 +129,7 @@ function filterByGO(
   kernel: number[][]
 ) {
   // @ts-ignore
-  window.filterByGO()
+  window.filterByGO(ptr, width, height, kernel.flat())
 }
 
 export function getDrawFn(
@@ -141,11 +141,16 @@ export function getDrawFn(
   kernel: Kernel = Kernel.sharpen
 ) {
   const context2D = canvas.getContext('2d')!
-  const dataLen = canvas.height * canvas.width
+  const dataLen = canvas.height * canvas.width * 4
   //@ts-ignore
-  const {internalptr: ptr} = window.initShareMemory(dataLen * 4)
-  const mem = new Uint8Array(goInstance.exports.mem.buffer, ptr, dataLen * 4)
-
+  const ptr = window.wasm.memHelper.malloc(dataLen)
+  // const {internalptr: ptr} = window.initShareMemory(dataLen * 4)
+  const mem = new Uint8ClampedArray(
+    window.wasm.memHelper.memory.buffer,
+    ptr,
+    dataLen
+  )
+  // const imageData = new ImageData(mem, canvas.width, canvas.height)
   // mem.set([1, 2, 3, 4, 5])
   // window.filterByGO(ptr, 1, 5)
   // console.log(mem[0], mem[4])
@@ -186,18 +191,19 @@ export function getDrawFn(
         break
       }
       case FilterOption.wasm: {
-        // mem.set(pixels.data)
-        // filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
-        // pixels.data.set(mem)
-        pixels.data.set(
-          //@ts-ignore
-          window.filterByGOCopy(
-            pixels.data,
-            canvas.width,
-            canvas.height,
-            kernelMap[kernel].flat()
-          )
-        )
+        mem.set(pixels.data)
+        filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
+        debugger
+        pixels.data.set(mem)
+        // pixels.data.set(
+        //   //@ts-ignore
+        //   window.filterByGOCopy(
+        //     pixels.data,
+        //     canvas.width,
+        //     canvas.height,
+        //     kernelMap[kernel].flat()
+        //   )
+        // )
         break
       }
     }

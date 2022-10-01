@@ -18,63 +18,77 @@ function App() {
 
     // @ts-ignore
     const go = new Go()
-
-    WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject).then(
-      (result) => {
-        const goInstance = result.instance
-        go.run(goInstance)
-
-        // const w = 2
-        // const h = 2
-        // const dataLen = w * h
-        // const {internalptr: ptr} = window.initShareMemory(dataLen * 2)
-        // const mem = new Uint8Array(
-        //   goInstance.exports.mem.buffer,
-        //   ptr,
-        //   dataLen * 2
-        // )
-        // mem.set(new Uint8ClampedArray([...new Array(dataLen * 2)].fill(1)))
-        // const kernel = [
-        //   [-1, -1, -1],
-        //   [-1, 9, -1],
-        //   [-1, -1, -1],
-        // ]
-        // window.filterByGO(ptr, w, h, kernel.flat())
-
-        if (videoRef.current && canvasRef.current) {
-          videoRef.current.crossOrigin = 'anonymous'
-          videoRef.current.src = '/test.mp4'
-          videoRef.current.play()
-
-          videoRef.current.addEventListener('loadedmetadata', function () {
-            // @ts-ignore
-            canvasRef.current.width = CANVAS_WIDTH
-            // @ts-ignore
-            canvasRef.current.height =
-              // @ts-ignore
-              (videoRef.current.videoHeight * CANVAS_WIDTH) /
-              // @ts-ignore
-              videoRef.current.videoWidth
-            const {
-              draw,
-              setFilterOption: fn1,
-              setKernel: fn2,
-            } = getDrawFn(
-              videoRef.current!,
-              canvasRef.current!,
-              goInstance,
-              (fps: number) => {
-                if (fpsRef.current) fpsRef.current.innerHTML = fps.toFixed(2)
-              }
-            )
-            setFilterOption.current = fn1
-            setKernel.current = fn2
-
-            draw()
-          })
-        }
+    // use the same WASM memory for all Wasm instances
+    const memory = new WebAssembly.Memory({initial: 100, maximum: 1000})
+    Promise.all([
+      WebAssembly.instantiateStreaming(fetch('/main.wasm'), {
+        env: {memory},
+        ...go.importObject,
+      }),
+      WebAssembly.instantiateStreaming(fetch('/memory.wasm'), {
+        env: {memory},
+      }),
+    ]).then((module) => {
+      const goInstance = module[0].instance
+      go.run(goInstance)
+      window.wasm = {}
+      window.wasm.memHelper = {
+        memory,
+        ...module[1].instance.exports,
       }
-    )
+
+      const w = 2
+      const h = 2
+      const dataLen = w * h * 4
+      const ptr = window.wasm.memHelper.malloc(dataLen)
+      const mem = new Uint8ClampedArray(
+        window.wasm.memHelper.memory.buffer,
+        ptr,
+        dataLen
+      )
+      mem.set(new Uint8ClampedArray([...new Array(dataLen)].fill(1)))
+      const kernel = [
+        [-1, -1, -1],
+        [-1, 9, -1],
+        [-1, -1, -1],
+      ]
+      window.filterByGO(ptr, w, h, kernel.flat())
+      console.log(mem)
+      debugger
+
+      if (videoRef.current && canvasRef.current) {
+        videoRef.current.crossOrigin = 'anonymous'
+        videoRef.current.src = '/test.mp4'
+        videoRef.current.play()
+
+        videoRef.current.addEventListener('loadedmetadata', function () {
+          // @ts-ignore
+          canvasRef.current.width = CANVAS_WIDTH
+          // @ts-ignore
+          canvasRef.current.height =
+            // @ts-ignore
+            (videoRef.current.videoHeight * CANVAS_WIDTH) /
+            // @ts-ignore
+            videoRef.current.videoWidth
+          const {
+            draw,
+            setFilterOption: fn1,
+            setKernel: fn2,
+          } = getDrawFn(
+            videoRef.current!,
+            canvasRef.current!,
+            goInstance,
+            (fps: number) => {
+              if (fpsRef.current) fpsRef.current.innerHTML = fps.toFixed(2)
+            }
+          )
+          setFilterOption.current = fn1
+          setKernel.current = fn2
+
+          draw()
+        })
+      }
+    })
   }, [])
 
   return (
