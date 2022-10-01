@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react'
 import {getDrawFn, Kernel, FilterOption} from './dip'
 import './App.css'
 
-const CANVAS_WIDTH = 65
+const CANVAS_WIDTH = 60
 
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})
@@ -42,8 +42,7 @@ function App() {
 
         if (videoRef.current && canvasRef.current) {
           videoRef.current.crossOrigin = 'anonymous'
-          videoRef.current.src =
-            'https://media.w3.org/2010/05/sintel/trailer.mp4'
+          videoRef.current.src = 'test.mp4'
           videoRef.current.play()
 
           videoRef.current.addEventListener('loadedmetadata', function () {
