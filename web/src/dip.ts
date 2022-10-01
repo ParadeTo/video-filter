@@ -109,7 +109,7 @@ function filterByGO(
   kernel: number[][]
 ) {
   // @ts-ignore
-  window.filterByGO(ptr, width, height, kernel.flat())
+  window.filterByGO(ptr, width, height, kernel)
 }
 
 export function getDrawFn(
