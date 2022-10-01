@@ -7,13 +7,11 @@ import (
 	"unsafe"
 )
 
-var myBuffer [88888]uint8
-
 func parseKernel(kernel js.Value) [3][3]int {
 	var arr [3][3]int
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
-			arr[i][j] = kernel.Index(i*3 + j).Int()
+			arr[i][j] = kernel.Index(i).Index(j).Int()
 		}
 	}
 	return arr
@@ -107,8 +105,6 @@ func filterByGO(this js.Value, args []js.Value) any {
 	ptr := (*[]uint8)(unsafe.Pointer(sliceHeader))
 	kernel := parseKernel(args[3])
 
-	// fmt.Println(width, height, l*4, kernel)
-
 	w := len(kernel)
 	half := w / 2
 	for y := half; y < height-half; y++ {
@@ -123,6 +119,7 @@ func filterByGO(this js.Value, args []js.Value) any {
 				for cx := 0; cx < w; cx++ {
 					cpx := ((y+(cy-half))*width + (x + (cx - half))) * 4
 					// if (px === 50216) debugger
+					// kernelVal := kernel.Index(cy).Index(cx).Int()
 					r += int((*ptr)[cpx+0]) * kernel[cy][cx]
 					g += int((*ptr)[cpx+1]) * kernel[cy][cx]
 					b += int((*ptr)[cpx+2]) * kernel[cy][cx]

@@ -1,13 +1,15 @@
 export enum FilterOption {
   off = 'off',
   js = 'js',
-  wasm = 'wasm',
+  wasmGo = 'wasmGo',
+  wasmRust = 'wasmRust',
 }
 
 const filterTimeRecordsMap: {[k: string]: number[]} = {
   [FilterOption.off]: [],
   [FilterOption.js]: [],
-  [FilterOption.wasm]: [],
+  [FilterOption.wasmGo]: [],
+  [FilterOption.wasmRust]: [],
 }
 
 export enum Kernel {
@@ -109,13 +111,14 @@ function filterByGO(
   kernel: number[][]
 ) {
   // @ts-ignore
-  window.filterByGO(ptr, width, height, kernel.flat())
+  window.filterByGO(ptr, width, height, kernel)
 }
 
 export function getDrawFn(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
-  goInstance: WebAssembly.Instance,
+  buffer: WebAssembly.Memory,
+  // goInstance: WebAssembly.Instance,
   afterEachFrame: (fps: number) => void,
   filterOption: FilterOption = FilterOption.off,
   kernel: Kernel = Kernel.sharpen
@@ -123,8 +126,9 @@ export function getDrawFn(
   const context2D = canvas.getContext('2d')!
   const size = canvas.height * canvas.width * 4
   //@ts-ignore
+  // For Go WASM
   const {internalptr: ptr} = window.initShareMemory(size)
-  const mem = new Uint8ClampedArray(goInstance.exports.mem.buffer, ptr, size)
+  const mem = new Uint8ClampedArray(buffer, ptr, size)
 
   const draw = () => {
     // record performance.
@@ -160,7 +164,7 @@ export function getDrawFn(
 
         break
       }
-      case FilterOption.wasm: {
+      case FilterOption.wasmGo: {
         mem.set(pixels.data)
         filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
         // pixels.data.set(mem)
@@ -180,6 +184,8 @@ export function getDrawFn(
         )
 
         break
+      }
+      case FilterOption.wasmRust: {
       }
       default:
         context2D.putImageData(pixels, 0, 0)

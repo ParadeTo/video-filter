@@ -61,7 +61,8 @@ function App() {
             } = getDrawFn(
               videoRef.current!,
               canvasRef.current!,
-              goInstance,
+              // goInstance,
+              goInstance.exports.mem.buffer,
               (fps: number) => {
                 if (fpsRef.current) fpsRef.current.innerHTML = fps.toFixed(2)
               }
