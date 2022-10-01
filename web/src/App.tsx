@@ -42,7 +42,8 @@ function App() {
 
         if (videoRef.current && canvasRef.current) {
           videoRef.current.crossOrigin = 'anonymous'
-          videoRef.current.src = '/test.mp4'
+          videoRef.current.src =
+            'https://media.w3.org/2010/05/sintel/trailer.mp4'
           videoRef.current.play()
 
           videoRef.current.addEventListener('loadedmetadata', function () {
