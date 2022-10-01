@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react'
 import {getDrawFn, Kernel, FilterOption} from './dip'
 import './App.css'
 
-const CANVAS_WIDTH = 600
+const CANVAS_WIDTH = 65
 
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})
@@ -18,22 +18,21 @@ function App() {
 
     // @ts-ignore
     const go = new Go()
-
     WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject).then(
       (result) => {
         const goInstance = result.instance
         go.run(goInstance)
 
-        // const w = 2
-        // const h = 2
+        // const w = 100
+        // const h = 200
         // const dataLen = w * h
-        // const {internalptr: ptr} = window.initShareMemory(dataLen * 2)
-        // const mem = new Uint8Array(
+        // const {internalptr: ptr} = window.initShareMemory(dataLen)
+        // const mem = new Uint8ClampedArray(
         //   goInstance.exports.mem.buffer,
         //   ptr,
-        //   dataLen * 2
+        //   dataLen
         // )
-        // mem.set(new Uint8ClampedArray([...new Array(dataLen * 2)].fill(1)))
+        // mem.set(new Uint8ClampedArray([...new Array(dataLen)].fill(1)))
         // const kernel = [
         //   [-1, -1, -1],
         //   [-1, 9, -1],
@@ -91,7 +90,7 @@ function App() {
         滤镜类型：
         <select onChange={(e) => setKernel.current(e.target.value)}>
           <option value={Kernel.sharpen}>锐化</option>
-          <option value={Kernel.smoothing}>平滑</option>
+          {/* <option value={Kernel.smoothing}>平滑</option> */}
           <option value={Kernel.laplace}>Laplace 算子</option>
         </select>
         <div
@@ -117,7 +116,6 @@ function App() {
             使用 <b>[WebAssembly]</b> 滤镜
           </span>
         </div>
-        {/* <button>确认</button> */}
       </div>
       <video
         style={{display: 'none'}}

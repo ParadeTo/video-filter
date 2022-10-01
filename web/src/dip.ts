@@ -34,26 +34,6 @@ const kernelMap = {
   ],
 }
 
-// function flipKernel(kernel: number[][]) {
-//   const h = kernel.length
-//   const half = Math.floor(h / 2)
-//   for (let i = 0; i < half; ++i) {
-//     for (let j = 0; j < h; ++j) {
-//       let _t = kernel[i][j]
-//       kernel[i][j] = kernel[h - i - 1][h - j - 1]
-//       kernel[h - i - 1][h - j - 1] = _t
-//     }
-//   }
-//   if (h & 1) {
-//     for (let j = 0; j < half; ++j) {
-//       let _t = kernel[half][j]
-//       kernel[half][j] = kernel[half][h - j - 1]
-//       kernel[half][h - j - 1] = _t
-//     }
-//   }
-//   return kernel
-// }
-
 function calcFPS(arr: number[]) {
   const n = 20
   if (arr.length > n) {
@@ -129,7 +109,7 @@ function filterByGO(
   kernel: number[][]
 ) {
   // @ts-ignore
-  window.filterByGO()
+  window.filterByGO(ptr, width, height, kernel.flat())
 }
 
 export function getDrawFn(
@@ -141,17 +121,10 @@ export function getDrawFn(
   kernel: Kernel = Kernel.sharpen
 ) {
   const context2D = canvas.getContext('2d')!
-  const dataLen = canvas.height * canvas.width
+  const size = canvas.height * canvas.width * 4
   //@ts-ignore
-  const {internalptr: ptr} = window.initShareMemory(dataLen * 4)
-  const mem = new Uint8Array(goInstance.exports.mem.buffer, ptr, dataLen * 4)
-
-  // mem.set([1, 2, 3, 4, 5])
-  // window.filterByGO(ptr, 1, 5)
-  // console.log(mem[0], mem[4])
-  // console.log(window.filterByGO(ptr, 1, 11))
-  // console.log(mem[10])
-  //@ts-ignore
+  const {internalptr: ptr} = window.initShareMemory(size)
+  const mem = new Uint8ClampedArray(goInstance.exports.mem.buffer, ptr, size)
 
   const draw = () => {
     // record performance.
@@ -183,27 +156,37 @@ export function getDrawFn(
             kernelMap[kernel]
           )
         )
+        context2D.putImageData(pixels, 0, 0)
+
         break
       }
       case FilterOption.wasm: {
-        // mem.set(pixels.data)
-        // filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
+        mem.set(pixels.data)
+        filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
         // pixels.data.set(mem)
-        pixels.data.set(
-          //@ts-ignore
-          window.filterByGOCopy(
-            pixels.data,
-            canvas.width,
-            canvas.height,
-            kernelMap[kernel].flat()
-          )
+        // pixels.data.set(
+        //   //@ts-ignore
+        //   window.filterByGOCopy(
+        //     pixels.data,
+        //     canvas.width,
+        //     canvas.height,
+        //     kernelMap[kernel].flat()
+        //   )
+        // )
+        context2D.putImageData(
+          new ImageData(mem, canvas.width, canvas.height),
+          0,
+          0
         )
+
         break
       }
+      default:
+        context2D.putImageData(pixels, 0, 0)
+        break
     }
 
     // append image onto the canvas.
-    context2D.putImageData(pixels, 0, 0)
 
     let timeUsed = performance.now() - timeStart
     filterTimeRecordsMap[filterOption].push(timeUsed)
