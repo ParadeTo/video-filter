@@ -7,6 +7,8 @@ const CANVAS_WIDTH = 800
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})
   const setKernel = useRef<(val: Kernel) => void>(() => {})
+  const setUseWebWorker = useRef<(val: boolean) => void>(() => {})
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const canvasRefHidden = useRef<HTMLCanvasElement>(null)
@@ -41,6 +43,7 @@ function App() {
           videoRef.current.videoWidth
         const {
           draw,
+          setUseWebWorker: fn3,
           setFilterOption: fn1,
           setKernel: fn2,
         } = getDrawFn(
@@ -55,7 +58,7 @@ function App() {
         )
         setFilterOption.current = fn1
         setKernel.current = fn2
-
+        setUseWebWorker.current = fn3
         draw()
       })
     }
@@ -111,6 +114,13 @@ function App() {
           {/* <option value={Kernel.smoothing}>平滑</option> */}
           <option value={Kernel.laplace}>Laplace 算子</option>
         </select>
+        &nbsp;&nbsp;使用 Web Worker：
+        <input
+          type='checkbox'
+          onChange={(e) => {
+            setUseWebWorker.current(e.target.checked)
+          }}
+        />
         <div
           className='render-container'
           onChange={(e) => {

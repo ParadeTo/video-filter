@@ -1,3 +1,7 @@
+import {WorkerPool} from './worker'
+
+const workerPool = new WorkerPool(3)
+
 export enum FilterOption {
   off = 'off',
   js = 'js',
@@ -127,9 +131,8 @@ export function getDrawFn(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
   canvasHidden: HTMLCanvasElement,
-  // buffer: WebAssembly.Memory,
-  // goInstance: WebAssembly.Instance,
   afterEachFrame: (fps: number) => void,
+  useWebWorker: boolean = false,
   filterOption: FilterOption = FilterOption.off,
   kernel: Kernel = Kernel.sharpen
 ) {
@@ -158,6 +161,8 @@ export function getDrawFn(
       canvas.height
     )
 
+    context2DHidden.getImageData
+
     // get current video data.
     const pixels = context2DHidden.getImageData(
       0,
@@ -168,14 +173,24 @@ export function getDrawFn(
 
     switch (filterOption) {
       case FilterOption.js: {
-        pixels.data.set(
-          filterByJS(
-            pixels.data,
-            canvas.width,
-            canvas.height,
-            kernelMap[kernel]
+        if (useWebWorker) {
+          const sharedArrayBuffer = await workerPool.filter({
+            imageData: pixels.data,
+            width: canvas.width,
+            height: canvas.height,
+            kernel: kernelMap[kernel],
+          })
+          pixels.data.set(new Uint8ClampedArray(sharedArrayBuffer))
+        } else {
+          pixels.data.set(
+            filterByJS(
+              pixels.data,
+              canvas.width,
+              canvas.height,
+              kernelMap[kernel]
+            )
           )
-        )
+        }
         context2D.putImageData(pixels, 0, 0)
         break
       }
@@ -228,10 +243,10 @@ export function getDrawFn(
 
   return {
     draw,
+    setUseWebWorker: (val: boolean) => (useWebWorker = val),
     setFilterOption: (val: FilterOption) => (filterOption = val),
     setKernel: (val: Kernel) => {
       kernel = val
-      // denominator = getDenominator(kernelMap[kernel])
     },
   }
 }
