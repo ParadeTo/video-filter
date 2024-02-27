@@ -40,13 +40,11 @@ function calcFPS(arr: number[]) {
   const n = 20
   if (arr.length > n) {
     arr.shift()
-  } else {
-    return NaN
   }
   let averageTime =
     arr.reduce((pre, item) => {
       return pre + item
-    }, 0) / n
+    }, 0) / arr.length
   return 1000 / averageTime
 }
 
@@ -114,28 +112,41 @@ function filterByGO(
   window.filterByGO(ptr, width, height, kernel)
 }
 
+async function filterByRust(
+  ctxHidden: CanvasRenderingContext2D,
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  kernel: number[][]
+) {
+  const {filter} = await import('rust-filter')
+  filter(ctxHidden, ctx, width, height, new Float64Array([].concat(...kernel)))
+}
+
 export function getDrawFn(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
-  buffer: WebAssembly.Memory,
+  canvasHidden: HTMLCanvasElement,
+  // buffer: WebAssembly.Memory,
   // goInstance: WebAssembly.Instance,
   afterEachFrame: (fps: number) => void,
   filterOption: FilterOption = FilterOption.off,
   kernel: Kernel = Kernel.sharpen
 ) {
   const context2D = canvas.getContext('2d')!
+  const context2DHidden = canvasHidden.getContext('2d')!
   const size = canvas.height * canvas.width * 4
   //@ts-ignore
   // For Go WASM
-  const {internalptr: ptr} = window.initShareMemory(size)
-  const mem = new Uint8ClampedArray(buffer, ptr, size)
+  // const {internalptr: ptr} = window.initShareMemory(size)
+  // const mem = new Uint8ClampedArray(buffer, ptr, size)
 
-  const draw = () => {
+  const draw = async () => {
     // record performance.
     const timeStart = performance.now()
 
     // render the first frame from the top-left of the canvas.
-    context2D.drawImage(
+    context2DHidden.drawImage(
       video,
       0,
       0,
@@ -148,7 +159,12 @@ export function getDrawFn(
     )
 
     // get current video data.
-    const pixels = context2D.getImageData(0, 0, canvas.width, canvas.height)
+    const pixels = context2DHidden.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    )
 
     switch (filterOption) {
       case FilterOption.js: {
@@ -161,31 +177,38 @@ export function getDrawFn(
           )
         )
         context2D.putImageData(pixels, 0, 0)
-
         break
       }
-      case FilterOption.wasmGo: {
-        mem.set(pixels.data)
-        filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
-        // pixels.data.set(mem)
-        // pixels.data.set(
-        //   //@ts-ignore
-        //   window.filterByGOCopy(
-        //     pixels.data,
-        //     canvas.width,
-        //     canvas.height,
-        //     kernelMap[kernel].flat()
-        //   )
-        // )
-        context2D.putImageData(
-          new ImageData(mem, canvas.width, canvas.height),
-          0,
-          0
-        )
+      // case FilterOption.wasmGo: {
+      //   mem.set(pixels.data)
+      //   filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
+      //   // pixels.data.set(mem)
+      //   // pixels.data.set(
+      //   //   //@ts-ignore
+      //   //   window.filterByGOCopy(
+      //   //     pixels.data,
+      //   //     canvas.width,
+      //   //     canvas.height,
+      //   //     kernelMap[kernel].flat()
+      //   //   )
+      //   // )
+      //   context2D.putImageData(
+      //     new ImageData(mem, canvas.width, canvas.height),
+      //     0,
+      //     0
+      //   )
 
-        break
-      }
+      //   break
+      // }
       case FilterOption.wasmRust: {
+        filterByRust(
+          context2DHidden,
+          context2D,
+          canvas.width,
+          canvas.height,
+          kernelMap[kernel]
+        )
+        break
       }
       default:
         context2D.putImageData(pixels, 0, 0)
