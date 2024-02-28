@@ -14,6 +14,7 @@ export enum FilterOption {
   js = 'js',
   wasmGo = 'wasmGo',
   wasmRust = 'wasmRust',
+  wasmRustSharedMem = 'wasmRustSharedMem',
 }
 
 const filterTimeRecordsMap: {[k: string]: number[]} = {
@@ -21,6 +22,7 @@ const filterTimeRecordsMap: {[k: string]: number[]} = {
   [FilterOption.js]: [],
   [FilterOption.wasmGo]: [],
   [FilterOption.wasmRust]: [],
+  [FilterOption.wasmRustSharedMem]: [],
 }
 
 export enum Kernel {
@@ -143,10 +145,10 @@ function getPtr(imageData: Uint8ClampedArray) {
   const ptr = return_pointer()
   const uint8ClampedArray = new Uint8ClampedArray(memory.buffer)
   uint8ClampedArray.set(imageData)
-  take_pointer_by_value(ptr)
-  console.log(uint8ClampedArray[0])
-  debugger
-  return {ptr, uint8ClampedArray}
+  // take_pointer_by_value(ptr)
+  // console.log(uint8ClampedArray[0])
+  // debugger
+  return ptr
 }
 
 export function getDrawFn(
@@ -154,7 +156,7 @@ export function getDrawFn(
   canvas: HTMLCanvasElement,
   canvasHidden: HTMLCanvasElement,
   afterEachFrame: (fps: number) => void,
-  useWebWorker: boolean = false,
+  useWebWorker: boolean = true,
   filterOption: FilterOption = FilterOption.off,
   kernel: Kernel = Kernel.sharpen
 ) {
@@ -239,38 +241,59 @@ export function getDrawFn(
       //   break
       // }
       case FilterOption.wasmRust: {
-        if (useWebWorker) {
-          const {ptr, uint8ClampedArray} = getPtr(pixels.data)
-          // filter_by_block(
-          //   ptr,
-          //   canvas.width,
-          //   0,
-          //   canvas.height,
-          //   new Float32Array([].concat(...kernelMap[kernel]))
-          // )
-          // const sharedArrayBuffer = getSharedBuffer(pixels.data)
-          debugger
-          await workerPool.filter({
-            useWasm: true,
-            width: canvas.width,
-            height: canvas.height,
-            kernel: kernelMap[kernel],
-          })
-          pixels.data.set(uint8ClampedArray)
+        // if (useWebWorker) {
+        //   const ptr = getPtr(pixels.data)
+        //   filter_by_block(
+        //     ptr,
+        //     canvas.width,
+        //     0,
+        //     canvas.height,
+        //     new Float32Array([].concat(...kernelMap[kernel]))
+        //   )
+        //   // const sharedArrayBuffer = getSharedBuffer(pixels.data)
 
-          context2D.putImageData(pixels, 0, 0)
-        } else {
-          filterByRust(
-            context2DHidden,
-            context2D,
-            canvas.width,
-            canvas.height,
-            kernelMap[kernel]
-          )
-        }
+        //   // await workerPool.filter({
+        //   //   useWasm: true,
+        //   //   width: canvas.width,
+        //   //   height: canvas.height,
+        //   //   kernel: kernelMap[kernel],
+        //   // })
+        //   pixels.data.set(
+        //     new Uint8ClampedArray(memory.buffer).slice(
+        //       0,
+        //       canvas.width * canvas.height * 4
+        //     )
+        //   )
 
+        //   context2D.putImageData(pixels, 0, 0)
+        // } else {
+
+        // }
+        filterByRust(
+          context2DHidden,
+          context2D,
+          canvas.width,
+          canvas.height,
+          kernelMap[kernel]
+        )
         break
       }
+      case FilterOption.wasmRustSharedMem:
+        const ptr = getPtr(pixels.data)
+        filter_by_block(
+          ptr,
+          canvas.width,
+          0,
+          canvas.height,
+          new Float32Array([].concat(...kernelMap[kernel]))
+        )
+        pixels.data.set(
+          new Uint8ClampedArray(memory.buffer).slice(
+            0,
+            canvas.width * canvas.height * 4
+          )
+        )
+        context2D.putImageData(pixels, 0, 0)
       default:
         context2D.putImageData(pixels, 0, 0)
         break

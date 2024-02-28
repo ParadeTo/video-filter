@@ -57,7 +57,7 @@ export class WorkerPool extends Event {
         if (end !== height) {
           end += half
         }
-        debugger
+
         worker.postMessage({
           useWasm,
           sharedArrayBuffer,

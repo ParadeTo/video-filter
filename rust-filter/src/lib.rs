@@ -64,6 +64,8 @@ pub fn return_pointer() -> *mut u8 {
 pub fn take_pointer_by_value(ptr: *mut u8) {
     unsafe {
         log!("{}", *ptr);
+        log!("{:p}", ptr);
+        log!("{:p}", &ptr);
         *ptr.add(0) = 123
     }
 }

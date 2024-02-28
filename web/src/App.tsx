@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react'
 import {getDrawFn, Kernel, FilterOption} from './dip'
 import './App.css'
 
-const CANVAS_WIDTH = 1000
+const CANVAS_WIDTH = 600
 
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})
@@ -114,13 +114,13 @@ function App() {
           {/* <option value={Kernel.smoothing}>平滑</option> */}
           <option value={Kernel.laplace}>Laplace 算子</option>
         </select>
-        &nbsp;&nbsp;使用 Web Worker：
+        {/* &nbsp;&nbsp;使用 Web Worker：
         <input
           type='checkbox'
           onChange={(e) => {
             setUseWebWorker.current(e.target.checked)
           }}
-        />
+        /> */}
         <div
           className='render-container'
           onChange={(e) => {
@@ -146,6 +146,16 @@ function App() {
           />
           <span className='radio-text'>
             使用 <b>[Rust WebAssembly]</b> 滤镜
+          </span>
+          <br />
+
+          <input
+            name='filterOption'
+            value={FilterOption.wasmRustSharedMem}
+            type='radio'
+          />
+          <span className='radio-text'>
+            使用 <b>[Rust WebAssembly]</b> 滤镜（Shared Memory）
           </span>
         </div>
       </div>
