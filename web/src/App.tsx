@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react'
 import {getDrawFn, Kernel, FilterOption} from './dip'
 import './App.css'
 
-const CANVAS_WIDTH = 800
+const CANVAS_WIDTH = 1000
 
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})

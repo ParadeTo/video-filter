@@ -27,27 +27,23 @@ export class WorkerPool extends Event {
     }
   }
 
-  getSharedBuffer(imageData: Uint8ClampedArray) {
-    const sharedArrayBuffer = new SharedArrayBuffer(imageData.buffer.byteLength)
-    new Uint8ClampedArray(sharedArrayBuffer).set(imageData)
-    return sharedArrayBuffer
-  }
-
   filter({
-    imageData,
     width,
     height,
     kernel,
+    sharedArrayBuffer,
+    useWasm,
   }: {
-    imageData: Uint8ClampedArray
+    sharedArrayBuffer?: SharedArrayBuffer
+    useWasm?: boolean
     width: number
     height: number
     kernel: number[][]
-  }): Promise<SharedArrayBuffer> {
+  }): Promise<void> {
     return new Promise((resolve) => {
       const lineNum = Math.floor(height / this.workerNum)
       const half = Math.floor(kernel.length / 2)
-      const sharedArrayBuffer = this.getSharedBuffer(imageData)
+
       for (let i = 0; i < this.workers.length; i++) {
         const worker = this.workers[i]
         let start = i * lineNum
@@ -61,14 +57,21 @@ export class WorkerPool extends Event {
         if (end !== height) {
           end += half
         }
-
-        worker.postMessage({sharedArrayBuffer, start, end, kernel, width})
+        debugger
+        worker.postMessage({
+          useWasm,
+          sharedArrayBuffer,
+          start,
+          end,
+          kernel,
+          width,
+        })
       }
 
       let i = 0
       this.on('done', () => {
         i++
-        if (i === this.workerNum) resolve(sharedArrayBuffer)
+        if (i === this.workerNum) resolve()
       })
     })
   }

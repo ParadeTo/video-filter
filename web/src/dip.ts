@@ -1,6 +1,13 @@
 import {WorkerPool} from './worker'
+import {
+  filter,
+  return_pointer,
+  take_pointer_by_value,
+  filter_by_block,
+} from 'rust-filter/rust_filter'
+import {memory} from 'rust-filter/rust_filter_bg.wasm'
 
-const workerPool = new WorkerPool(3)
+const workerPool = new WorkerPool(1)
 
 export enum FilterOption {
   off = 'off',
@@ -123,8 +130,23 @@ async function filterByRust(
   height: number,
   kernel: number[][]
 ) {
-  const {filter} = await import('rust-filter')
-  filter(ctxHidden, ctx, width, height, new Float64Array([].concat(...kernel)))
+  filter(ctxHidden, ctx, width, height, new Float32Array([].concat(...kernel)))
+}
+
+function getSharedBuffer(imageData: Uint8ClampedArray) {
+  const sharedArrayBuffer = new SharedArrayBuffer(imageData.buffer.byteLength)
+  new Uint8ClampedArray(sharedArrayBuffer).set(imageData)
+  return sharedArrayBuffer
+}
+
+function getPtr(imageData: Uint8ClampedArray) {
+  const ptr = return_pointer()
+  const uint8ClampedArray = new Uint8ClampedArray(memory.buffer)
+  uint8ClampedArray.set(imageData)
+  take_pointer_by_value(ptr)
+  console.log(uint8ClampedArray[0])
+  debugger
+  return {ptr, uint8ClampedArray}
 }
 
 export function getDrawFn(
@@ -174,8 +196,9 @@ export function getDrawFn(
     switch (filterOption) {
       case FilterOption.js: {
         if (useWebWorker) {
-          const sharedArrayBuffer = await workerPool.filter({
-            imageData: pixels.data,
+          const sharedArrayBuffer = getSharedBuffer(pixels.data)
+          await workerPool.filter({
+            sharedArrayBuffer,
             width: canvas.width,
             height: canvas.height,
             kernel: kernelMap[kernel],
@@ -216,13 +239,36 @@ export function getDrawFn(
       //   break
       // }
       case FilterOption.wasmRust: {
-        filterByRust(
-          context2DHidden,
-          context2D,
-          canvas.width,
-          canvas.height,
-          kernelMap[kernel]
-        )
+        if (useWebWorker) {
+          const {ptr, uint8ClampedArray} = getPtr(pixels.data)
+          // filter_by_block(
+          //   ptr,
+          //   canvas.width,
+          //   0,
+          //   canvas.height,
+          //   new Float32Array([].concat(...kernelMap[kernel]))
+          // )
+          // const sharedArrayBuffer = getSharedBuffer(pixels.data)
+          debugger
+          await workerPool.filter({
+            useWasm: true,
+            width: canvas.width,
+            height: canvas.height,
+            kernel: kernelMap[kernel],
+          })
+          pixels.data.set(uint8ClampedArray)
+
+          context2D.putImageData(pixels, 0, 0)
+        } else {
+          filterByRust(
+            context2DHidden,
+            context2D,
+            canvas.width,
+            canvas.height,
+            kernelMap[kernel]
+          )
+        }
+
         break
       }
       default:
