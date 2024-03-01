@@ -72,6 +72,8 @@ pub fn take_pointer_by_value(ptr: *mut u8) {
 
 #[wasm_bindgen]
 pub fn filter_by_block(ptr: *mut u8, width: u32, start: u32, end: u32, kernel: Vec<f32>) {
+    set_panic_hook();
+
     unsafe {
         let h = (kernel.len() as f64).sqrt() as u32;
         let half = h / 2;

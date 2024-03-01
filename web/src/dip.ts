@@ -16,6 +16,7 @@ export enum FilterOption {
   wasmGo = 'wasmGo',
   wasmRust = 'wasmRust',
   wasmRustSharedMem = 'wasmRustSharedMem',
+  wasmRustWebworker = 'wasmRustWebworker',
 }
 
 const filterTimeRecordsMap: {[k: string]: number[]} = {
@@ -25,6 +26,7 @@ const filterTimeRecordsMap: {[k: string]: number[]} = {
   [FilterOption.wasmGo]: [],
   [FilterOption.wasmRust]: [],
   [FilterOption.wasmRustSharedMem]: [],
+  [FilterOption.wasmRustWebworker]: [],
 }
 
 export enum Kernel {
@@ -145,14 +147,18 @@ function getSharedBuffer(imageData: Uint8ClampedArray) {
 
 function getPtr(imageData: Uint8ClampedArray) {
   const ptr = return_pointer()
+  // debugger
+  // while (imageData.byteLength > memory.buffer.byteLength) {
+  //   memory.grow(1)
+  // }
+  // debugger
   const uint8ClampedArray = new Uint8ClampedArray(memory.buffer)
   uint8ClampedArray.set(imageData)
-  // take_pointer_by_value(ptr)
-  // console.log(uint8ClampedArray[0])
-  // debugger
+
   return ptr
 }
-
+1114112
+1179648
 export function getDrawFn(
   video: HTMLVideoElement,
   canvas: HTMLCanvasElement,
@@ -209,7 +215,7 @@ export function getDrawFn(
         )
         context2D.putImageData(pixels, 0, 0)
         break
-      case FilterOption.jsWebworker:
+      case FilterOption.jsWebworker: {
         const sharedArrayBuffer = getSharedBuffer(pixels.data)
         await workerPool.filter({
           sharedArrayBuffer,
@@ -220,56 +226,9 @@ export function getDrawFn(
         pixels.data.set(new Uint8ClampedArray(sharedArrayBuffer))
         context2D.putImageData(pixels, 0, 0)
         break
-      // case FilterOption.wasmGo: {
-      //   mem.set(pixels.data)
-      //   filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
-      //   // pixels.data.set(mem)
-      //   // pixels.data.set(
-      //   //   //@ts-ignore
-      //   //   window.filterByGOCopy(
-      //   //     pixels.data,
-      //   //     canvas.width,
-      //   //     canvas.height,
-      //   //     kernelMap[kernel].flat()
-      //   //   )
-      //   // )
-      //   context2D.putImageData(
-      //     new ImageData(mem, canvas.width, canvas.height),
-      //     0,
-      //     0
-      //   )
+      }
 
-      //   break
-      // }
       case FilterOption.wasmRust:
-        // if (useWebWorker) {
-        //   const ptr = getPtr(pixels.data)
-        //   filter_by_block(
-        //     ptr,
-        //     canvas.width,
-        //     0,
-        //     canvas.height,
-        //     new Float32Array([].concat(...kernelMap[kernel]))
-        //   )
-        //   // const sharedArrayBuffer = getSharedBuffer(pixels.data)
-
-        //   // await workerPool.filter({
-        //   //   useWasm: true,
-        //   //   width: canvas.width,
-        //   //   height: canvas.height,
-        //   //   kernel: kernelMap[kernel],
-        //   // })
-        //   pixels.data.set(
-        //     new Uint8ClampedArray(memory.buffer).slice(
-        //       0,
-        //       canvas.width * canvas.height * 4
-        //     )
-        //   )
-
-        //   context2D.putImageData(pixels, 0, 0)
-        // } else {
-
-        // }
         filterByRust(
           context2DHidden,
           context2D,
@@ -280,11 +239,13 @@ export function getDrawFn(
         break
       case FilterOption.wasmRustSharedMem:
         const ptr = getPtr(pixels.data)
+        // memory.grow(1)
         filter_by_block(
           ptr,
           canvas.width,
           0,
           canvas.height,
+          // new Float32Array([])
           new Float32Array([].concat(...kernelMap[kernel]))
         )
         pixels.data.set(
@@ -294,6 +255,27 @@ export function getDrawFn(
           )
         )
         context2D.putImageData(pixels, 0, 0)
+        break
+      case FilterOption.wasmRustWebworker: {
+        const sharedArrayBuffer = getSharedBuffer(pixels.data)
+        // const sha
+        // const shared = new Uint8ClampedArray(
+        //   new SharedArrayBuffer(pixels.data.byteLength)
+        // )
+        // shared.set(new Uint8ClampedArray(memory.buffer))
+        // const sharedArrayBuffer = new Uint8ClampedArray(mem)
+        await workerPool.filter({
+          useWasm: true,
+          sharedArrayBuffer,
+          width: canvas.width,
+          height: canvas.height,
+          kernel: kernelMap[kernel],
+        })
+        pixels.data.set(new Uint8ClampedArray(sharedArrayBuffer))
+        context2D.putImageData(pixels, 0, 0)
+        break
+      }
+
       default:
         context2D.putImageData(pixels, 0, 0)
         break

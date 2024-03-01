@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from 'react'
 import {getDrawFn, Kernel, FilterOption} from './dip'
 import './App.css'
 
-const CANVAS_WIDTH = 600
+const CANVAS_WIDTH = 1000
 
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})
@@ -165,6 +165,16 @@ function App() {
           />
           <span className='radio-text'>
             使用 <b>[Rust WebAssembly]</b> 滤镜（Shared Memory）
+          </span>
+          <br />
+
+          <input
+            name='filterOption'
+            value={FilterOption.wasmRustWebworker}
+            type='radio'
+          />
+          <span className='radio-text'>
+            使用 <b>[Rust WebAssembly]</b> 滤镜（开启 WebWorker）
           </span>
         </div>
       </div>

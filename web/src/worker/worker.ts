@@ -2,32 +2,36 @@ onmessage = async (e: MessageEvent) => {
   const {
     data: {start, end, kernel, width, sharedArrayBuffer, useWasm},
   } = e
+
   if (useWasm) {
     const {take_pointer_by_value, return_pointer, filter_by_block} =
       await import('rust-filter/rust_filter')
     const {memory} = await import('rust-filter/rust_filter_bg.wasm')
     const ptr = return_pointer()
-
     const uint8ClampedArrayForMemBuf = new Uint8ClampedArray(memory.buffer)
-    uint8ClampedArrayForMemBuf[0] = 255
-    // uint8ClampedArrayForMemBuf.set(new Uint8ClampedArray(sharedArrayBuffer))
-    // uint8ClampedArrayForMemBuf[0] = 255
-    take_pointer_by_value(ptr)
-    console.log(uint8ClampedArrayForMemBuf[0])
+    const uint8ClampedArrayForSharedBuf = new Uint8ClampedArray(
+      sharedArrayBuffer
+    )
+    uint8ClampedArrayForMemBuf.set(
+      uint8ClampedArrayForSharedBuf.slice(start * width * 4, end * width * 4)
+      // ptr + start * width * 4
+    )
     // debugger
-    // filter_by_block(
-    //   ptr,
-    //   width,
-    //   start,
-    //   end,
-    //   new Float32Array([].concat(...kernel))
-    // )
-    // const uint8ClampedArrayForSharedBuf = new Uint8ClampedArray(
-    //   sharedArrayBuffer
-    // )
+    filter_by_block(
+      ptr,
+      width,
+      0,
+      end - start,
+      new Float32Array([].concat(...kernel))
+    )
     // debugger
-    // uint8ClampedArrayForSharedBuf.set(uint8ClampedArrayForMemBuf)
-    // debugger
+    uint8ClampedArrayForSharedBuf.set(
+      new Uint8ClampedArray(memory.buffer).slice(
+        ptr,
+        (end - start) * width * 4
+      ),
+      start * width * 4
+    )
   } else {
     const uint8ClampedArray = new Uint8ClampedArray(sharedArrayBuffer)
     const h = kernel.length,
