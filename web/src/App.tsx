@@ -7,7 +7,7 @@ const CANVAS_WIDTH = 600
 function App() {
   const setFilterOption = useRef<(val: FilterOption) => void>(() => {})
   const setKernel = useRef<(val: Kernel) => void>(() => {})
-  const setUseWebWorker = useRef<(val: boolean) => void>(() => {})
+  // const setUseWebWorker = useRef<(val: boolean) => void>(() => {})
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -43,7 +43,7 @@ function App() {
           videoRef.current.videoWidth
         const {
           draw,
-          setUseWebWorker: fn3,
+          // setUseWebWorker: fn3,
           setFilterOption: fn1,
           setKernel: fn2,
         } = getDrawFn(
@@ -58,7 +58,7 @@ function App() {
         )
         setFilterOption.current = fn1
         setKernel.current = fn2
-        setUseWebWorker.current = fn3
+        // setUseWebWorker.current = fn3
         draw()
       })
     }
@@ -137,6 +137,15 @@ function App() {
           <input name='filterOption' value={FilterOption.js} type='radio' />
           <span className='radio-text'>
             使用 <b>[JavaScript]</b> 滤镜
+          </span>
+          <br />
+          <input
+            name='filterOption'
+            value={FilterOption.jsWebworker}
+            type='radio'
+          />
+          <span className='radio-text'>
+            使用 <b>[JavaScript]</b> 滤镜 （开启 WebWorker）
           </span>
           <br />
           <input

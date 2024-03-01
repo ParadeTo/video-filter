@@ -7,11 +7,12 @@ import {
 } from 'rust-filter/rust_filter'
 import {memory} from 'rust-filter/rust_filter_bg.wasm'
 
-const workerPool = new WorkerPool(1)
+const workerPool = new WorkerPool(4)
 
 export enum FilterOption {
   off = 'off',
   js = 'js',
+  jsWebworker = 'jsWebworker',
   wasmGo = 'wasmGo',
   wasmRust = 'wasmRust',
   wasmRustSharedMem = 'wasmRustSharedMem',
@@ -20,6 +21,7 @@ export enum FilterOption {
 const filterTimeRecordsMap: {[k: string]: number[]} = {
   [FilterOption.off]: [],
   [FilterOption.js]: [],
+  [FilterOption.jsWebworker]: [],
   [FilterOption.wasmGo]: [],
   [FilterOption.wasmRust]: [],
   [FilterOption.wasmRustSharedMem]: [],
@@ -156,7 +158,7 @@ export function getDrawFn(
   canvas: HTMLCanvasElement,
   canvasHidden: HTMLCanvasElement,
   afterEachFrame: (fps: number) => void,
-  useWebWorker: boolean = true,
+  // useWebWorker: boolean = true,
   filterOption: FilterOption = FilterOption.off,
   kernel: Kernel = Kernel.sharpen
 ) {
@@ -196,29 +198,28 @@ export function getDrawFn(
     )
 
     switch (filterOption) {
-      case FilterOption.js: {
-        if (useWebWorker) {
-          const sharedArrayBuffer = getSharedBuffer(pixels.data)
-          await workerPool.filter({
-            sharedArrayBuffer,
-            width: canvas.width,
-            height: canvas.height,
-            kernel: kernelMap[kernel],
-          })
-          pixels.data.set(new Uint8ClampedArray(sharedArrayBuffer))
-        } else {
-          pixels.data.set(
-            filterByJS(
-              pixels.data,
-              canvas.width,
-              canvas.height,
-              kernelMap[kernel]
-            )
+      case FilterOption.js:
+        pixels.data.set(
+          filterByJS(
+            pixels.data,
+            canvas.width,
+            canvas.height,
+            kernelMap[kernel]
           )
-        }
+        )
         context2D.putImageData(pixels, 0, 0)
         break
-      }
+      case FilterOption.jsWebworker:
+        const sharedArrayBuffer = getSharedBuffer(pixels.data)
+        await workerPool.filter({
+          sharedArrayBuffer,
+          width: canvas.width,
+          height: canvas.height,
+          kernel: kernelMap[kernel],
+        })
+        pixels.data.set(new Uint8ClampedArray(sharedArrayBuffer))
+        context2D.putImageData(pixels, 0, 0)
+        break
       // case FilterOption.wasmGo: {
       //   mem.set(pixels.data)
       //   filterByGO(ptr, canvas.width, canvas.height, kernelMap[kernel])
@@ -240,7 +241,7 @@ export function getDrawFn(
 
       //   break
       // }
-      case FilterOption.wasmRust: {
+      case FilterOption.wasmRust:
         // if (useWebWorker) {
         //   const ptr = getPtr(pixels.data)
         //   filter_by_block(
@@ -277,7 +278,6 @@ export function getDrawFn(
           kernelMap[kernel]
         )
         break
-      }
       case FilterOption.wasmRustSharedMem:
         const ptr = getPtr(pixels.data)
         filter_by_block(
@@ -312,7 +312,7 @@ export function getDrawFn(
 
   return {
     draw,
-    setUseWebWorker: (val: boolean) => (useWebWorker = val),
+    // setUseWebWorker: (val: boolean) => (useWebWorker = val),
     setFilterOption: (val: FilterOption) => (filterOption = val),
     setKernel: (val: Kernel) => {
       kernel = val
